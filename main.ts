@@ -1,14 +1,26 @@
 import { $, Glob } from 'bun';
+import { getInputFromUser } from './utils';
 
 async function main() {
     // Initialization
     const SYSTEM: string = await Bun.file("SYSTEM.md").text();
     const messages: Parameters<typeof callModel>[0] = [];
+    let pendingUserInput = true;
+    const userMessageQueue: string[] = [];
+    const WORKER_userInput = new Worker('./get_user_input.ts');
+    WORKER_userInput.onmessage = event => userMessageQueue.push(event.data);
+
+    const promptUser = async (message: string) => {
+        WORKER_userInput.postMessage({message});
+        while (userMessageQueue.length == 0) await Bun.sleep(10);
+        return userMessageQueue.shift();
+    }
 
     // Agent loop
-    let pendingUserInput = true;
     while (true) {
-        if (pendingUserInput) messages.push({role: "user", content: await getInputFromUser("User: ")});
+        if (pendingUserInput) {
+            messages.push({role: "user", content: await promptUser("User: ")});
+        }
 
         // Read skill front matter and updated SYSTEM prompt
         const skillData = await readSkillMetadata();
@@ -42,13 +54,6 @@ async function handleResponse(content: any): Promise<{toolResult: any } | undefi
     } 
 
     return undefined;
-}
-
-async function getInputFromUser(message: string): string {
-    process.stdout.write(`\n${message}`);
-    for await (const line of console) {
-        return line;
-    }
 }
 
 async function readSkillMetadata(): Promise<{ path: string, frontmatter: string }[]> {
