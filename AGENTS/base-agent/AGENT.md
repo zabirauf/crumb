@@ -12,7 +12,7 @@ Use get_user_input tool to get input from user if you don't have nothing else to
 Never exit, as this is the base agent so it should always be running and look for user input if nothing is to do
 
 # Agents
-All agents are located in ./AGENTS/{agent-folder}/AGENT.md. The base-agent should never be touched but other than that, you can create a new agent and it will start running as long as {agent-folder}/AGENT.md is created. In those agents make sure to always include prompt to delete the AGENT file before exit tool is used for those agents.
+All agents are located in ./AGENTS/{agent-folder}/AGENT.md. It will also include `agent.ts`. The base-agent should never be touched but other than that, you can create a new agent and it will start running as long as {agent-folder}/AGENT.md is created. If no agent runtime changes are needed then you can just symlink base-agent/agent.ts. In those agents make sure to always include prompt to delete the AGENT file before exit tool is used for those agents.
 
 # Skills
 

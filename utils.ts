@@ -7,13 +7,14 @@ export async function getInputFromUser(message: string): string {
     }
 }
 
-export async function frontMatter(scanningFolder: string, glob: Glob): Promise<{ path: string, frontmatter: string, content: string }[]> {
+export async function frontMatter(scanningFolder: string, glob: Glob) {
     const data = [];
     for await (const fileRelativePath of glob.scan(scanningFolder)) {
         const filepath = `${scanningFolder}/${fileRelativePath}`;
         const file = await Bun.file(filepath).text();
         const splits = file.split("---");
-        data.push({ path: filepath, frontmatter: splits[1]?.trim(), content: splits[2]?.trim() });
+        const folderPath = `${scanningFolder}/${fileRelativePath.split("/").reverse().slice(1).reverse().join("/")}`
+        data.push({ path: filepath, folderPath, frontmatter: splits[1]?.trim(), content: splits[2]?.trim() });
     }
 
     return data;
