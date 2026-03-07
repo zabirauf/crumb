@@ -1,88 +1,40 @@
 import { $, Glob } from 'bun';
-import { getInputFromUser } from './utils';
+import { frontMatter } from './utils';
+
+type Message = { role: "user" | "assistant", content: any };
+type AgentWorkersData = { [path: string]: {worker: Worker, messages: Message[], path: string }};
 
 async function main() {
     // Initialization
-    const SYSTEM: string = await Bun.file("SYSTEM.md").text();
-    const messages: Parameters<typeof callModel>[0] = [];
-    let pendingUserInput = true;
-    const userMessageQueue: string[] = [];
-    const WORKER_userInput = new Worker('./get_user_input.ts');
-    WORKER_userInput.onmessage = event => userMessageQueue.push(event.data);
+    const agentGlob = new Glob("**/AGENT.md");
+    const agentWorkers: AgentWorkersData = {};
 
-    const promptUser = async (message: string) => {
-        WORKER_userInput.postMessage({message});
-        while (userMessageQueue.length == 0) await Bun.sleep(10);
-        return userMessageQueue.shift();
-    }
-
-    // Agent loop
     while (true) {
-        if (pendingUserInput) {
-            messages.push({role: "user", content: await promptUser("User: ")});
+        const agentsFrontmatter = await frontMatter("./AGENTS", agentGlob);
+
+        for (const agent of agentsFrontmatter) {
+            if (!!agentWorkers[agent.path]) continue;
+            const agentData = await createAgent(agent, agentWorkers);
+            agentData.messages.push({role: "user", content: "Start"});
+            agentData.worker.postMessage({type: "start", systemPrompt: agent.content, messages: agentData.messages});
         }
-
-        // Read skill front matter and updated SYSTEM prompt
-        const skillData = await readSkillMetadata();
-        const systemPrompt = SYSTEM.replace("${SKILLS}", JSON.stringify(skillData, undefined, 2));
-        const resp = await callModel(messages, systemPrompt);
-
-        // Handle response by either calling tool or outputting
-        const toolResults = [];
-        for (const content of resp.content) {
-            const respHandleResult = await handleResponse(content);
-            if (respHandleResult?.toolResult) {
-                toolResults.push({type: "tool_result", tool_use_id: content.id, content: JSON.stringify(respHandleResult.toolResult, undefined, 2)});
-            }
-        }
-        messages.push({role: "assistant", content: resp.content});
-        messages.push({role: "user", content: toolResults});
-
-        // If the turn has ended then wait for next user prompt
-        pendingUserInput = resp.stop_reason == "end_turn";
+        await Bun.sleep(1000);
     }
 }
 
-async function handleResponse(content: any): Promise<{toolResult: any } | undefined> {
-    if (content.type == "tool_use" && content.name == "call_shell") {
-        const userPerm = await getInputFromUser(`Run command:\n----\n\n${content.input.shellscript}\n\n----\n (y/n)`);
-        if (userPerm.toLowerCase() == "y") {
-            return { toolResult: await callShell(content.input.shellscript) };
+async function createAgent(agentFrontmatter: any, agentWorkers: AgentWorkersData) {
+    const file = Bun.file('./agent.ts');
+    const agentCode = new Blob([await file.arrayBuffer()], { type: "application/typescript" });
+    const agentData = { worker: new Worker(URL.createObjectURL(agentCode)), messages: [] as Message[], path: agentFrontmatter.path};
+    agentWorkers[agentFrontmatter.path] = agentData;
+    agentData.worker.onmessage = (event) => {
+        if (event.data.type == "exit") {
+            agentData.worker.terminate();
+            delete agentWorkers[agentData.path];
         }
-    } else if (content.type == "text") {
-        process.stdout.write(`Assistant: ${content.text}`);
-    } 
+    };
 
-    return undefined;
-}
-
-async function readSkillMetadata(): Promise<{ path: string, frontmatter: string }[]> {
-    const glob = Glob("**/SKILL.md");
-    const skillFrontMatter = [];
-    for await (const file of glob.scan("./SKILLS")) {
-        const filepath = `./SKILLS/${file}`;
-        const skillFile = await Bun.file(filepath).text();
-        skillFrontMatter.push({ path: filepath, frontmatter: skillFile.split("---")[1]?.trim() });
-    }
-
-    return skillFrontMatter.filter(fm => !!fm.frontmatter);
-}
-
-async function callModel(messages: {role: "user" | "assistant", content: any}[], system: string): Promise<any> {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {headers: {"x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01"}, method: "POST", body: JSON.stringify({
-        model: "claude-opus-4-6",
-        max_tokens: 32_768,
-        tools: [ { name: "call_shell", description: "Runs shell commands on the computer", input_schema: { type: "object", properties: {"shellscript": { type: "string", description: "The shell command or script to run"}}, required: ["shellscript"]}}],
-        messages,
-        output_config: { effort: "high" },
-        system
-    })});
-    return await resp.json();
-}
-
-async function callShell(command: string): Promise<{stdout: string, stderr: string, exitCode: number }> {
-    const { stdout, stderr, exitCode } = await $`sh -c "${command}"`.nothrow().quiet();
-    return { stdout: stdout.toString(), stderr: stderr.toString(), exitCode: exitCode }
+    return agentData;
 }
 
 await main();
