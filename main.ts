@@ -37,8 +37,8 @@ async function createAgent(agentFrontmatter: any, agentWorkers: AgentWorkersData
             delete agentWorkers[agentData.folderPath];
         } else if (event.data.type == "restart") {
             agentData.worker.terminate();
-            agentWorkers[agentData.folderPath].worker = await createAgentWorker();
-            agentWorkers[agentData.folderPath].worker.postMessage({type: "start", systemPrompt: agentFrontmatter.content, messages: agentData.messages});
+            agentData.worker = await createAgentWorker();
+            agentData.worker.postMessage({type: "start", systemPrompt: agentFrontmatter.content, messages: agentData.messages});
         }
     };
 
