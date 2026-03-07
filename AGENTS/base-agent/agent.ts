@@ -13,10 +13,10 @@ self.onmessage = async (event) => {
 async function runAgentLoop(systemPromptTemplated: string, messages: Parameters<typeof callModel>[0]) {
     // Initialization
     const globSkill = Glob("**/SKILL.md");
-    let shouldStop = false;
+    let agentRunState: "run" | "stop" | "restart" = "run";
 
     // Agent loop
-    while (!shouldStop) {
+    while (agentRunState == "run") {
         // Read skill front matter and updated SYSTEM prompt
         const skillData = (await frontMatter("./SKILLS", globSkill)).map(sd => ({path: sd.path, frontMatter: sd.frontmatter}));
         const systemPrompt = systemPromptTemplated.replace("${SKILLS}", JSON.stringify(skillData, undefined, 2));
@@ -29,8 +29,8 @@ async function runAgentLoop(systemPromptTemplated: string, messages: Parameters<
             const respHandleResult = await handleResponse(content);
             if (respHandleResult?.toolResult) {
                 toolResults.push({type: "tool_result", tool_use_id: content.id, content: JSON.stringify(respHandleResult.toolResult, undefined, 2)});
-            } else if (respHandleResult?.exit) {
-                shouldStop = true;
+            } else if (respHandleResult?.runState) {
+                agentRunState = respHandleResult.runState;
             }
         }
         messages.push({role: "assistant", content: resp.content});
@@ -38,10 +38,10 @@ async function runAgentLoop(systemPromptTemplated: string, messages: Parameters<
     }
 
     // Terminate the worker
-    postMessage({type: "exit"});
+    agentRunState == "stop" ? postMessage({type: "exit"}) : postMessage({type: "restart"});
 }
 
-async function handleResponse(content: any): Promise<{toolResult: any } | { exit: true } | undefined> {
+async function handleResponse(content: any): Promise<{toolResult: any } | { runState: "stop" | "restart" } | undefined> {
     console.log("Entered handle response", content);
     if (content.type == "tool_use" && content.name == "call_shell") {
         const userPerm = await getInputFromUser(`Run command:\n----\n\n${content.input.shellscript}\n\n----\n (y/n)`);
@@ -52,7 +52,10 @@ async function handleResponse(content: any): Promise<{toolResult: any } | { exit
         return { toolResult: await getInputFromUser("User: ")};
     } else if (content.type == "tool_use" && content.name == "exit") {
         process.stdout.write(`Agent Exiting ...`);
-        return { exit: true };
+        return { runState: "stop" };
+    } else if (content.type == "tool_use" && content.name == "restart") {
+        process.stdout.write(`Agent Restarting...`);
+        return { runState: "restart" };
     } else if (content.type == "text") {
         process.stdout.write(`Assistant: ${content.text}`);
         return undefined;
@@ -66,7 +69,8 @@ async function callModel(messages: {role: "user" | "assistant", content: any}[],
         tools: [ 
             { name: "call_shell", description: "Runs shell commands on the computer", input_schema: { type: "object", properties: {"shellscript": { type: "string", description: "The shell command or script to run"}}, required: ["shellscript"]}},
             { name: "get_user_input", description: "Run this to get prompt from user", input_schema: {type: "object", properties: { }} },
-            { name: "exit", description: "Run this if the agent should exit", input_schema: {type: "object", properties: { }} }
+            { name: "restart", description: "Run this if the agent should restarted for example due to agent runtime changing", input_schema: {type: "object", properties: { }} },
+            { name: "exit", description: "Run this if the agent should exit", input_schema: {type: "object", properties: { }} },
         ],
         messages,
         output_config: { effort: "high" },

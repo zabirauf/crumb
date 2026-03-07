@@ -23,14 +23,22 @@ async function main() {
 }
 
 async function createAgent(agentFrontmatter: any, agentWorkers: AgentWorkersData) {
-    const file = Bun.file(`${agentFrontmatter.folderPath}/agent.ts`);
-    const agentCode = new Blob([await file.arrayBuffer()], { type: "application/typescript" });
-    const agentData = { worker: new Worker(URL.createObjectURL(agentCode)), messages: [] as Message[], path: agentFrontmatter.path, folderPath: agentFrontmatter.folderPath };
+    const createAgentWorker = async () => {
+        const file = Bun.file(`${agentFrontmatter.folderPath}/agent.ts`);
+        const agentCode = new Blob([await file.arrayBuffer()], { type: "application/typescript" });
+        return new Worker(URL.createObjectURL(agentCode));
+    }
+
+    const agentData = { worker: await createAgentWorker(), messages: [] as Message[], path: agentFrontmatter.path, folderPath: agentFrontmatter.folderPath };
     agentWorkers[agentFrontmatter.folderPath] = agentData;
-    agentData.worker.onmessage = (event) => {
+    agentData.worker.onmessage = async (event) => {
         if (event.data.type == "exit") {
             agentData.worker.terminate();
             delete agentWorkers[agentData.folderPath];
+        } else if (event.data.type == "restart") {
+            agentData.worker.terminate();
+            agentWorkers[agentData.folderPath].worker = await createAgentWorker();
+            agentWorkers[agentData.folderPath].worker.postMessage({type: "start", systemPrompt: agentFrontmatter.content, messages: agentData.messages});
         }
     };
 
