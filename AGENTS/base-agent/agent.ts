@@ -73,7 +73,7 @@ async function handleResponse(content: any): Promise<{toolResult: any } | { runS
 
 async function callModel(messages: {role: "user" | "assistant", content: any}[], system: string): Promise<any> {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {headers: {"x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01"}, method: "POST", body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: "claude-opus-4-6",
         max_tokens: 32_768,
         tools: [ 
             { name: "call_shell", description: "Runs shell commands on the computer", input_schema: { type: "object", properties: {"shellscript": { type: "string", description: "The shell command or script to run"}}, required: ["shellscript"]}},
