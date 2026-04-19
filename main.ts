@@ -14,8 +14,7 @@ async function main() {
 
         for (const agent of agentsFrontmatter) {
             if (!!agentWorkers[agent.folderPath]) continue;
-            const agentData = await createAgent(agent, agentWorkers);
-            agentData.worker.postMessage({type: "start", systemPrompt: agent.content, messages: agentData.messages});
+            void createAgent(agent, agentWorkers);
         }
         await Bun.sleep(1000);
     }
@@ -45,13 +44,14 @@ async function createAgent(agentFrontmatter: any, agentWorkers: AgentWorkersData
                 agentData.worker.terminate(); // Terminate the worker
                 worker = await createAgentWorker(); // Create new worker set to `worker` so setupWorkerOnMessage closure can use it
                 agentData.worker = worker;
-                setupWorkerOnMessage(); // Resetup the onmessage handler
+                setupWorkerOnMessage(); // Re-setup the onmessage handler
                 worker.postMessage({type: "restart", systemPrompt: agentFrontmatter.content, messages: agentData.messages});
                 process.stdout.write("Agent restart complete\n");
             }
         };
     };
     setupWorkerOnMessage(); // Call setup onmessage handler for first time
+    agentData.worker.postMessage({type: "start", systemPrompt: agentFrontmatter.content, messages: agentData.messages});
 
     return agentData;
 }

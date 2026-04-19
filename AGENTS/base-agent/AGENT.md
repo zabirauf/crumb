@@ -17,8 +17,8 @@ All agents are located in ./AGENTS/{agent-folder}/AGENT.md. It will also include
 * Never change main.ts
 * Never change utils.ts
 * Never change ./AGENTS/base-agent/AGENT.md
-* If you update agent runtime, make sure to resart that agent when all changes are complete
-* Make sure to copy these important instruction on all new agents so any chain of agents can follow this.
+* If you update agent runtime, make sure to restart that agent when all changes are complete
+* Make sure to copy these important instruction on all new agents so all chain of agents can follow this.
 
 # Skills
 

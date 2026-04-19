@@ -4,7 +4,6 @@ import { frontMatter, getInputFromUser } from './utils';
 declare var self: Worker;
 
 self.onmessage = async (event) => {
-    // console.log("Received message", event.data);
     if (event.data.type == "start") {
         event.data.messages.push({role: "user", content: "Start"});
     }
@@ -25,9 +24,9 @@ async function runAgentLoop(systemPromptTemplated: string, messages: Parameters<
         const skillData = (await frontMatter("./SKILLS", globSkill)).map(sd => ({path: sd.path, frontMatter: sd.frontmatter}));
         const systemPrompt = systemPromptTemplated.replace("${SKILLS}", JSON.stringify(skillData, undefined, 2));
         const resp = await callModel(messages, systemPrompt);
-        // console.log("Model response", resp);
 
-        // Handle response by either calling tool or outputting
+        // Handle response by either calling tool or responding
+        let clearConversation = false;
         const toolResults = [];
         for (const content of resp.content) {
             const respHandleResult = await handleResponse(content);
@@ -35,20 +34,27 @@ async function runAgentLoop(systemPromptTemplated: string, messages: Parameters<
                 agentRunState = respHandleResult.runState;
             }
             respHandleResult && toolResults.push({type: "tool_result", tool_use_id: content.id, content: JSON.stringify(respHandleResult.toolResult, undefined, 2)});
+            clearConversation = clearConversation || respHandleResult?.action == "clear_conversation";
         }
-        messages.push({role: "assistant", content: resp.content});
-        messages.push({role: "user", content: toolResults});
+
+        if (clearConversation) {
+            messages = [{role: "user", content: "Start"}];
+        } else {
+            messages.push({role: "assistant", content: resp.content});
+            messages.push({role: "user", content: toolResults});
+        }
     }
 
     // Terminate the worker
-    agentRunState == "stop" ? postMessage({type: "exit", messages}) : postMessage({type: "restart", messages});
+    agentRunState == "stop" ? 
+        postMessage({type: "exit", messages}) 
+        : postMessage({type: "restart", messages});
 }
 
 let yoloMode = false;
-async function handleResponse(content: any): Promise<{toolResult: any } | { runState: "stop" | "restart", toolResult: string } | undefined> {
-    // console.log("Entered handle response", content);
+async function handleResponse(content: any): Promise<{toolResult: any } | { runState: "stop" | "restart", toolResult: string } | { action: "clear_conversation", toolResult: any | undefined} | undefined> {
     if (content.type == "tool_use" && content.name == "call_shell") {
-        let userPerm = yoloMode ? "y" : await getInputFromUser(`Run command:\n----\n\n${content.input.shellscript}\n\n----\n (y/n)`);
+        let userPerm = yoloMode ? "y" : await getInputFromUser(`Run command:\n----\n\n${content.input.shellscript}\n\n----\n (y/n/yolo)`);
         if (userPerm.toLowerCase() == "yolo") {
             yoloMode = true;
             userPerm = "y";
@@ -60,11 +66,14 @@ async function handleResponse(content: any): Promise<{toolResult: any } | { runS
     } else if (content.type == "tool_use" && content.name == "get_user_input") {
         return { toolResult: await getInputFromUser("User: ")};
     } else if (content.type == "tool_use" && content.name == "exit") {
-        process.stdout.write(`Agent Exiting ...\n`);
+        process.stdout.write('Agent Exiting ...\n');
         return { runState: "stop", toolResult: "Stopped Agent" };
     } else if (content.type == "tool_use" && content.name == "restart") {
-        process.stdout.write(`Agent Restarting...\n`);
+        process.stdout.write('Agent Restarting...\n');
         return { runState: "restart", toolResult: "Restarted Agent" };
+    } else if (content.type == "tool_use" && content.name == "clear_conversation") {
+        process.stdout.write('Clearing conversation\n');
+        return { action: "clear_conversation" };
     } else if (content.type == "text") {
         process.stdout.write(`Assistant: ${content.text}\n`);
         return undefined;
