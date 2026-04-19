@@ -1,5 +1,5 @@
 import { $, Glob } from 'bun';
-import { frontMatter } from './utils';
+import { frontmatter } from './utils';
 
 type Message = { role: "user" | "assistant", content: any };
 type AgentWorkersData = { [path: string]: {worker: Worker, messages: Message[], path: string, folderPath: string }};
@@ -10,7 +10,7 @@ async function main() {
 
     while (true) {
         // On each iteration of loop, start any new agents that haven't run before
-        const agentsFrontmatter = await frontMatter("./AGENTS", agentGlob);
+        const agentsFrontmatter = await frontmatter("./AGENTS", agentGlob);
 
         for (const agent of agentsFrontmatter) {
             if (!!agentWorkers[agent.folderPath]) continue;
@@ -45,13 +45,13 @@ async function createAgent(agentFrontmatter: any, agentWorkers: AgentWorkersData
                 worker = await createAgentWorker(); // Create new worker set to `worker` so setupWorkerOnMessage closure can use it
                 agentData.worker = worker;
                 setupWorkerOnMessage(); // Re-setup the onmessage handler
-                worker.postMessage({type: "restart", systemPrompt: agentFrontmatter.content, messages: agentData.messages});
+                worker.postMessage({type: "restart", systemPrompt: agentFrontmatter.content, frontmatter: agentFrontmatter.frontmatter, messages: agentData.messages});
                 process.stdout.write("Agent restart complete\n");
             }
         };
     };
     setupWorkerOnMessage(); // Call setup onmessage handler for first time
-    agentData.worker.postMessage({type: "start", systemPrompt: agentFrontmatter.content, messages: agentData.messages});
+    agentData.worker.postMessage({type: "start", systemPrompt: agentFrontmatter.content, frontmatter: agentFrontmatter.frontmatter, messages: agentData.messages});
 
     return agentData;
 }

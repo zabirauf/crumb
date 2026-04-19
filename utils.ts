@@ -9,7 +9,7 @@ export async function getInputFromUser(message: string): string {
 
 const FRONTMATTER_REGEX_PATTERN = /(.+):(.+)$/gm;
 
-export async function frontMatter(scanningFolder: string, glob: Glob) {
+export async function frontmatter(scanningFolder: string, glob: Glob) {
     const data = [];
     for await (const fileRelativePath of glob.scan(scanningFolder)) {
         const filepath = `${scanningFolder}/${fileRelativePath}`;

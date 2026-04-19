@@ -1,5 +1,5 @@
 import { $, Glob } from 'bun';
-import { frontMatter, getInputFromUser } from './utils';
+import { frontmatter, getInputFromUser } from '../utils';
 // prevents TS errors
 declare var self: Worker;
 
@@ -9,11 +9,11 @@ self.onmessage = async (event) => {
     }
 
     if (event.data.type == "start" || event.data.type == "restart") {
-        void runAgentLoop(event.data.systemPrompt, event.data.messages);
+        void runAgentLoop(event.data.systemPrompt, event.data.frontmatter, event.data.messages);
     }
 }
 
-async function runAgentLoop(systemPromptTemplated: string, messages: Parameters<typeof callModel>[0]) {
+async function runAgentLoop(systemPromptTemplated: string, frontmatterStr: string, messages: Parameters<typeof callModel>[0]) {
     // Initialization
     const globSkill = Glob("**/SKILL.md");
     let agentRunState: "run" | "stop" | "restart" = "run";
@@ -21,16 +21,19 @@ async function runAgentLoop(systemPromptTemplated: string, messages: Parameters<
     // Agent loop
     while (agentRunState == "run") {
         // Read skill front matter and updated SYSTEM prompt
-        const skillData = (await frontMatter("./SKILLS", globSkill)).map(sd => ({path: sd.path, frontMatter: sd.frontmatter}));
-        const systemPrompt = systemPromptTemplated.replace("${SKILLS}", JSON.stringify(skillData, undefined, 2));
+        const skillData = (await frontmatter("./SKILLS", globSkill)).map(sd => ({path: sd.path, frontmatter: sd.frontmatter}));
+        const systemPrompt = systemPromptTemplated.replace("${SKILLS}", !skillData || skillData.length == 0 
+            ? "No SKILLs found" 
+            : JSON.stringify(skillData, undefined, 2 /* Space ident */));
         const resp = await callModel(messages, systemPrompt);
 
         // Handle response by either calling tool or responding
         let clearConversation = false;
         const toolResults = [];
         for (const content of resp.content) {
-            const respHandleResult = await handleResponse(content);
+            const respHandleResult = await handleResponse(frontmatterStr, content);
             if (respHandleResult?.runState) {
+                // If there is any change in run state then update that
                 agentRunState = respHandleResult.runState;
             }
             respHandleResult && toolResults.push({type: "tool_result", tool_use_id: content.id, content: JSON.stringify(respHandleResult.toolResult, undefined, 2)});
@@ -52,7 +55,7 @@ async function runAgentLoop(systemPromptTemplated: string, messages: Parameters<
 }
 
 let yoloMode = false;
-async function handleResponse(content: any): Promise<{toolResult: any } | { runState: "stop" | "restart", toolResult: string } | { action: "clear_conversation", toolResult: any | undefined} | undefined> {
+async function handleResponse(frontmatter: string, content: any): Promise<{toolResult: any } | { runState: "stop" | "restart", toolResult: string } | { action: "clear_conversation", toolResult: any | undefined} | undefined> {
     if (content.type == "tool_use" && content.name == "call_shell") {
         let userPerm = yoloMode ? "y" : await getInputFromUser(`Run command:\n----\n\n${content.input.shellscript}\n\n----\n (y/n/yolo)`);
         if (userPerm.toLowerCase() == "yolo") {
@@ -64,7 +67,8 @@ async function handleResponse(content: any): Promise<{toolResult: any } | { runS
             return { toolResult: await callShell(content.input.shellscript) };
         }
     } else if (content.type == "tool_use" && content.name == "get_user_input") {
-        return { toolResult: await getInputFromUser("User: ")};
+        // Only allow user input if specifically allowed in agent frontmatter
+        return frontmatter.indexOf("interactive: yes") !== -1 ? { toolResult: await getInputFromUser("User: ")} : { toolResult: "User input is not allowed" };
     } else if (content.type == "tool_use" && content.name == "exit") {
         process.stdout.write('Agent Exiting ...\n');
         return { runState: "stop", toolResult: "Stopped Agent" };
