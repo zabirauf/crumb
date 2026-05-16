@@ -1,5 +1,5 @@
-import { $, Glob } from 'bun';
 import { frontmatter } from './utils';
+import { Glob } from 'bun';
 
 type Message = { role: "user" | "assistant", content: any };
 type AgentWorkersData = { [path: string]: {worker: Worker, messages: Message[], path: string, folderPath: string }};
@@ -14,6 +14,7 @@ async function main() {
 
         for (const agent of agentsFrontmatter) {
             if (!!agentWorkers[agent.folderPath]) continue;
+
             void createAgent(agent, agentWorkers);
         }
         await Bun.sleep(1000);
@@ -50,8 +51,11 @@ async function createAgent(agentFrontmatter: any, agentWorkers: AgentWorkersData
             }
         };
     };
-    setupWorkerOnMessage(); // Call setup onmessage handler for first time
-    agentData.worker.postMessage({type: "start", systemPrompt: agentFrontmatter.content, frontmatter: agentFrontmatter.frontmatter, messages: agentData.messages});
+
+    agentData.worker.addEventListener("open", () => {
+        setupWorkerOnMessage(); // Call setup onmessage handler for first time
+        agentData.worker.postMessage({type: "start", systemPrompt: agentFrontmatter.content, frontmatter: agentFrontmatter.frontmatter, messages: agentData.messages});
+    });
 
     return agentData;
 }

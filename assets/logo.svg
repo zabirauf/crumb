@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="200" height="200" role="img" aria-label="Crumb mascot">
+  <title>Crumb</title>
+
+  <!-- soft ground shadow -->
+  <ellipse cx="115" cy="195" rx="62" ry="7" fill="#000" opacity="0.12"/>
+
+  <!-- a few crumb-friends scattered around -->
+  <circle cx="22"  cy="70"  r="4.5" fill="#D6A05A" stroke="#5C3812" stroke-width="2"/>
+  <circle cx="205" cy="55"  r="3.5" fill="#D6A05A" stroke="#5C3812" stroke-width="2"/>
+  <circle cx="195" cy="170" r="5.5" fill="#D6A05A" stroke="#5C3812" stroke-width="2"/>
+  <circle cx="30"  cy="175" r="4"   fill="#D6A05A" stroke="#5C3812" stroke-width="2"/>
+  <circle cx="12"  cy="130" r="2.5" fill="#D6A05A" stroke="#5C3812" stroke-width="1.5"/>
+
+  <!-- thinking sparkle (it's an agent!) -->
+  <g stroke="#F4B400" stroke-width="3" stroke-linecap="round">
+    <line x1="160" y1="22" x2="160" y2="38"/>
+    <line x1="150" y1="30" x2="170" y2="30"/>
+    <line x1="153" y1="23" x2="167" y2="37"/>
+    <line x1="167" y1="23" x2="153" y2="37"/>
+  </g>
+
+  <!-- body: a wobbly, hand-drawn crumb -->
+  <path d="M 62 58
+           Q 38 78, 50 108
+           Q 36 140, 70 158
+           Q 102 174, 140 162
+           Q 174 152, 168 118
+           Q 184 88, 158 70
+           Q 132 46, 102 56
+           Q 80 48, 62 58 Z"
+        fill="#F2C879"
+        stroke="#5C3812"
+        stroke-width="4.5"
+        stroke-linejoin="round"/>
+
+  <!-- crumb texture flecks on body -->
+  <circle cx="78"  cy="80"  r="3"   fill="#C68A4E" opacity="0.7"/>
+  <circle cx="148" cy="135" r="2.5" fill="#C68A4E" opacity="0.7"/>
+  <circle cx="155" cy="92"  r="2"   fill="#C68A4E" opacity="0.7"/>
+  <circle cx="68"  cy="135" r="2"   fill="#C68A4E" opacity="0.7"/>
+
+  <!-- eye whites -->
+  <circle cx="88"  cy="102" r="15" fill="#FFFDF5" stroke="#3A2208" stroke-width="3.5"/>
+  <circle cx="132" cy="102" r="15" fill="#FFFDF5" stroke="#3A2208" stroke-width="3.5"/>
+
+  <!-- pupils, looking slightly up-and-right (curious!) -->
+  <circle cx="92"  cy="104" r="6.5" fill="#3A2208"/>
+  <circle cx="136" cy="104" r="6.5" fill="#3A2208"/>
+
+  <!-- pupil shine -->
+  <circle cx="94.5" cy="101.5" r="2.2" fill="#FFFDF5"/>
+  <circle cx="138.5" cy="101.5" r="2.2" fill="#FFFDF5"/>
+
+  <!-- blush -->
+  <ellipse cx="72"  cy="128" rx="7" ry="3.5" fill="#F08080" opacity="0.55"/>
+  <ellipse cx="148" cy="128" rx="7" ry="3.5" fill="#F08080" opacity="0.55"/>
+
+  <!-- lil smile with a tiny tooth -->
+  <path d="M 95 132 Q 110 148, 125 132" fill="none" stroke="#3A2208" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M 107 138 L 107 144 L 113 144 L 113 138 Z" fill="#FFFDF5" stroke="#3A2208" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

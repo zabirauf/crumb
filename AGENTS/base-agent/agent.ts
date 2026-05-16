@@ -1,15 +1,17 @@
 import { $, Glob } from 'bun';
-import { frontmatter, getInputFromUser } from '../utils';
+import { frontmatter, getInputFromUser } from './utils';
 // prevents TS errors
 declare var self: Worker;
 
 self.onmessage = async (event) => {
+    console.log("Worker: Message received", event);
     if (event.data.type == "start") {
         event.data.messages.push({role: "user", content: "Start"});
     }
 
     if (event.data.type == "start" || event.data.type == "restart") {
-        void runAgentLoop(event.data.systemPrompt, event.data.frontmatter, event.data.messages);
+        console.log("Running agent loop");
+        await runAgentLoop(event.data.systemPrompt, event.data.frontmatter, event.data.messages);
     }
 }
 
@@ -20,11 +22,13 @@ async function runAgentLoop(systemPromptTemplated: string, frontmatterStr: strin
 
     // Agent loop
     while (agentRunState == "run") {
+        console.log("Loop");
         // Read skill front matter and updated SYSTEM prompt
         const skillData = (await frontmatter("./SKILLS", globSkill)).map(sd => ({path: sd.path, frontmatter: sd.frontmatter}));
         const systemPrompt = systemPromptTemplated.replace("${SKILLS}", !skillData || skillData.length == 0 
             ? "No SKILLs found" 
-            : JSON.stringify(skillData, undefined, 2 /* Space ident */));
+            : JSON.stringify(skillData, undefined, 2 /* Space ident */)).replace("${YOLO_MODE}", yoloMode ? "On" : "Off");
+        console.log("System Prompt", systemPrompt);
         const resp = await callModel(messages, systemPrompt);
 
         // Handle response by either calling tool or responding
@@ -86,13 +90,13 @@ async function handleResponse(frontmatter: string, content: any): Promise<{toolR
 
 async function callModel(messages: {role: "user" | "assistant", content: any}[], system: string): Promise<any> {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {headers: {"x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01"}, method: "POST", body: JSON.stringify({
-        model: "claude-opus-4-6",
+        model: "claude-opus-4-7",
         max_tokens: 32_768,
         tools: [ 
             { name: "call_shell", description: "Runs shell commands on the computer", input_schema: { type: "object", properties: {"shellscript": { type: "string", description: "The shell command or script to run"}}, required: ["shellscript"]}},
             { name: "get_user_input", description: "Run this to get prompt from user", input_schema: {type: "object", properties: { }} },
-            { name: "restart", description: "Run this if the agent should restarted for example due to agent runtime changing", input_schema: {type: "object", properties: { }} },
             { name: "clear_conversation", description: "Run this only if user enters '/clear' which indicates they want to clear the conversation, otherwise never run this.", input_schema: {type:"object", properties: {}}},
+            { name: "restart", description: "Run this if the agent should restarted for example due to agent runtime changing", input_schema: {type: "object", properties: { }} },
             { name: "exit", description: "Run this if the agent should exit", input_schema: {type: "object", properties: { }} },
         ],
         cache_control: { type: "ephemeral" },
