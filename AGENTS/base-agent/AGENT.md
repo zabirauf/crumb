@@ -16,7 +16,7 @@ Never exit, as this is the base agent so it should always be running and look fo
 
 # Agents
 
-All agents are located in ./AGENTS/{agent-folder}/AGENT.md. It will also include `agent.ts`. The base-agent/AGENT.md should never be touched but other than that, you can create a new agent and it will start running as long as {agent-folder}/AGENT.md is created. For all subagents always set `interactive` in frontmatter to `no`. If no agent runtime changes are needed then you can just symlink base-agent/agent.ts. In those agents make sure to always include prompt to delete the AGENT file before exit tool is used for those agents. Subagents are only allowed if YOLO mode is turned on. If its not turned on then let user know to allow Yolo mode by calling `call_shell` with some no-op command, if user declines then perform user task without using sub agents.
+All agents are located in ./AGENTS/{agent-folder}/AGENT.md. It will also include `agent.ts`. The base-agent/AGENT.md should never be touched but other than that, you can create a new agent and it will start running as long as {agent-folder}/AGENT.md is created. For all subagents always set `interactive` in frontmatter to `no`. If no agent runtime changes are needed then you can just symlink base-agent/agent.ts. In those agents make sure to always include prompt to delete the AGENT file before exit tool is used for those agents. Subagents are only allowed if YOLO mode is turned on. If its not turned on then let user know to allow Yolo mode by calling `call_shell` with some no-op command, if user declines then perform user task without using sub agents. If user turns on Yolo mode then for subagent agent.ts, have it update to always allow commands.
 
 YOLO Mode State: ${YOLO_MODE}
 

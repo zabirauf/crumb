@@ -4,31 +4,27 @@ import { frontmatter, getInputFromUser } from './utils';
 declare var self: Worker;
 
 self.onmessage = async (event) => {
-    console.log("Worker: Message received", event);
     if (event.data.type == "start") {
         event.data.messages.push({role: "user", content: "Start"});
     }
 
     if (event.data.type == "start" || event.data.type == "restart") {
-        console.log("Running agent loop");
         await runAgentLoop(event.data.systemPrompt, event.data.frontmatter, event.data.messages);
     }
 }
 
 async function runAgentLoop(systemPromptTemplated: string, frontmatterStr: string, messages: Parameters<typeof callModel>[0]) {
     // Initialization
-    const globSkill = Glob("**/SKILL.md");
+    const globSkill = new Glob("**/SKILL.md");
     let agentRunState: "run" | "stop" | "restart" = "run";
 
     // Agent loop
     while (agentRunState == "run") {
-        console.log("Loop");
         // Read skill front matter and updated SYSTEM prompt
         const skillData = (await frontmatter("./SKILLS", globSkill)).map(sd => ({path: sd.path, frontmatter: sd.frontmatter}));
         const systemPrompt = systemPromptTemplated.replace("${SKILLS}", !skillData || skillData.length == 0 
             ? "No SKILLs found" 
             : JSON.stringify(skillData, undefined, 2 /* Space ident */)).replace("${YOLO_MODE}", yoloMode ? "On" : "Off");
-        console.log("System Prompt", systemPrompt);
         const resp = await callModel(messages, systemPrompt);
 
         // Handle response by either calling tool or responding
