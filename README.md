@@ -5,9 +5,9 @@ Crumb is a small, handwritten, self-improving agent. You can use it to improve i
 
 The goal of the project is to learn how to write a very simple agent that can improve itself and hot reload so improvements show up as user chats with it. It's a simple hello world for self improving agent harness.
 
-## Demo
+The demo shows how the agent can improve itself into a nice TUI while running.
 
-[![asciicast](https://asciinema.org/a/xrBmB6TukARD6Jl9.svg)](https://asciinema.org/a/xrBmB6TukARD6Jl9)
+![Crumb demo](assets/demo.gif)
 
 ## How to run
 
