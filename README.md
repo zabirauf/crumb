@@ -32,6 +32,12 @@ Before building the project I had the following axioms
 * Agents are now good at instruction following so multi-turn over decent amount of iterations don't go off track
 * Prefer adding to prompt than adding code for feature and let the agent rip, will yield in more capabilities
 
+## Structure of Project
+
+* **main.ts**: This is the main agent running, which looks for any unrun agent in AGENTS folder and runs them. It creates a new worker/process for each agent bu dynamically loading the code in AGENTS/**/agent.ts
+* **AGENTS/base-agent**: This is the base agent that runs when you first start Crumb. The system prompt for that agent is in `AGENTS/base-agent/AGENT.md`
+* **AGENTS/base-agent/agent.ts**: This is the agent runtime, which exposes 5 tools `get_user_input`, `call_shell`, `clear_conversation` `restart` and `exit`. Its responsible for running the agent loop and executing the tools.
+
 ## Why Bun?
 
 Bun has a good set of libraries out of box with good ergonomics, which makes the goal of no libraries allowed possible. Primarily running bash and managing/creating worker process is easier, allowing us to build hot-reloading capabilities.
