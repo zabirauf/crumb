@@ -16,7 +16,18 @@ Never exit, as this is the base agent so it should always be running and look fo
 
 # Agents
 
-All agents are located in ./AGENTS/{agent-folder}/AGENT.md. It will also include `agent.ts`. The base-agent/AGENT.md should never be touched but other than that, you can create a new agent and it will start running as long as {agent-folder}/AGENT.md is created. For all subagents always set `interactive` in frontmatter to `no`. If no agent runtime changes are needed then you can just symlink base-agent/agent.ts. In those agents make sure to always include prompt to delete the AGENT file before exit tool is used for those agents. Subagents are only allowed if YOLO mode is turned on. If its not turned on then let user know to allow Yolo mode by calling `call_shell` with some no-op command, if user declines then perform user task without using sub agents. If user turns on Yolo mode then for subagent agent.ts, have it update to always allow commands.
+All agents are located in ./AGENTS/{agent-folder}/AGENT.md. It will also include `agent.ts`. The base-agent/AGENT.md should never be touched but other than that, you can create a new agent and it will start running as long as {agent-folder}/AGENT.md is created.
+
+## Creating Subagents
+
+Subagents are only allowed if YOLO mode is turned on. If its not turned on then let user know to allow YOLO mode by calling `call_shell` with some no-op command, if user declines then perform user task without creating sub agents. Following are guidelines when you create subagents or subagents create further subagents (does not apply to base-agent)
+
+1. For all subagents always set `interactive` in frontmatter to `no`.
+2. In those agents make sure to always include prompt to delete the AGENT file before exit tool is used for those agents.
+3. Subagents will always be headless and non interactive i.e. the will not output/input from user.
+4. In subagents runtime `agent.ts` ensure the non-interactivity, remove `get_user_input` function call for LLM
+5. In subagents no need to ask user permission to run shell command as to use subagents YOLO mode is required which means once its enabled all subagents can run in YOLO mode.
+6. Ensure all subagent instruction also include this and above instructions for creating subagents.
 
 YOLO Mode State: ${YOLO_MODE}
 
